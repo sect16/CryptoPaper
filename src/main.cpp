@@ -46,12 +46,11 @@
 //#define SD_SCLK 14
 //#define SD_CS 15
 
-
-#define White         0xF0
-#define LightGrey     0xB0
-#define Grey          0x80
-#define DarkGrey      0x40
-#define Black         0x00
+#define White 0xF0
+#define LightGrey 0xB0
+#define Grey 0x80
+#define DarkGrey 0x40
+#define Black 0x00
 
 int cursor_x;
 int cursor_y;
@@ -85,10 +84,9 @@ EpdRotation orientation = EPD_ROT_LANDSCAPE;
 // ----------------------------
 // Configurations - Update these
 // ----------------------------
-
 const char *ssid = "YOUR_SSID";
 const char *password = "YOUR_PASSWORD";
-const boolean staticIp = 1;
+const boolean staticIp = 0;
 
 IPAddress local_IP(192, 168, 31, 115);
 IPAddress gateway(192, 168, 31, 254);
@@ -181,7 +179,7 @@ void print_wakeup_reason()
 void connectToWifi()
 {
 
-  //Serial.println("scan start");
+  // Serial.println("scan start");
   /**
   // WiFi.scanNetworks will return the number of networks found
   int n = WiFi.scanNetworks();
@@ -244,22 +242,24 @@ void connectToWifi()
   Serial.println(WiFi.dnsIP());
 }
 
-void footer()
+void renderFooter()
 {
+  cursor_y = 520 + 15;
+  cursor_x = 20;
   date = date.substring(0, 26);
   date = "Last update: " + date;
   Serial.println(date);
   char ts[date.length()];
   date.toCharArray(ts, date.length());
-  //Serial.println("Date length = " + String(date.length()));
+  // Serial.println("Date length = " + String(date.length()));
   String str = String(ts[30]) + String(ts[31]);
-  //Serial.println("Old hour = " + str);
+  // Serial.println("Old hour = " + str);
   int hh = str.toInt() + 8;
-  //Serial.println("New hour = " + String(hh));
+  // Serial.println("New hour = " + String(hh));
   char strnew[1];
   sprintf(strnew, "%02d", hh);
-  //Serial.println("First digit = " + String(strnew[0]));
-  //Serial.println("Second digit = " + String(strnew[1]));
+  // Serial.println("First digit = " + String(strnew[0]));
+  // Serial.println("Second digit = " + String(strnew[1]));
 
   if (hh > 23)
   {
@@ -272,17 +272,16 @@ void footer()
   font_props.flags = EPD_DRAW_ALIGN_LEFT;
 
   EpdRect area = {
-    .x = 1 ,
-    .y = 520 ,
-    .width = 370,
-    .height = 18,
+      .x = 1,
+      .y = 520,
+      .width = 370,
+      .height = 18,
   };
   epd_fill_rect(area, White, fb);
-  //err = epd_hl_update_area(&hl, MODE_GC16, temperature, area);
+  // err = epd_hl_update_area(&hl, MODE_GC16, temperature, area);
   epd_write_string(&OpenSans8B, ts, &cursor_x, &cursor_y, fb, &font_props);
   epd_poweron();
   err = epd_hl_update_area(&hl, MODE_GC16, temperature, area);
-  
 }
 
 String formatPercentageChange(double change)
@@ -362,21 +361,21 @@ void renderColumnSym(Crypto crypto)
   epd_write_string(&FiraSans, string1, &cursor_x, &cursor_y, fb, &font_props);
 }
 
-void renderColumn(String str, int w)
+void renderCell(String str, int w)
 {
   EpdFontProperties font_props = epd_font_properties_default();
   font_props.flags = EPD_DRAW_ALIGN_LEFT;
   char text[str.length()];
   sprintf(text, "%s", str);
-  //Serial.print("Debug: ");
-  //Serial.println(text);
-  //Serial.printf("X: %d Y: %d", cursor_x, cursor_y);
-  //Serial.println();
+  // Serial.print("Debug: ");
+  // Serial.println(text);
+  // Serial.printf("X: %d Y: %d", cursor_x, cursor_y);
+  // Serial.println();
   EpdRect area = {
-    .x = cursor_x,
-    .y = cursor_y - 40,
-    .width = w,
-    .height = 50,
+      .x = cursor_x,
+      .y = cursor_y - 40,
+      .width = w,
+      .height = 50,
   };
   epd_fill_rect(area, White, fb);
   epd_write_string(&FiraSans, text, &cursor_x, &cursor_y, fb, &font_props);
@@ -384,7 +383,7 @@ void renderColumn(String str, int w)
   err = epd_hl_update_area(&hl, MODE_GC16, temperature, area);
 }
 
-void title()
+void renderHeader()
 {
   EpdFontProperties font_props = epd_font_properties_default();
   cursor_x = 20;
@@ -410,33 +409,66 @@ void title()
   char we[] = "Week(%)";
   // writeln((GFXfont *)&FiraSans, we, &cursor_x, &cursor_y, NULL);
   epd_write_string(&FiraSans, we, &cursor_x, &cursor_y, fb, &font_props);
-
 }
 
-void display_center_message(const char* text) {
-    // first set full screen to white
-    epd_hl_set_all_white(&hl);
+void display_center_message(const char *text)
+{
+  // first set full screen to white
+  epd_hl_set_all_white(&hl);
 
-    int cursor_x = EPD_WIDTH / 2;
-    int cursor_y = EPD_HEIGHT / 2;
-    if (orientation == EPD_ROT_PORTRAIT) {
-        // height and width switched here because portrait mode
-        cursor_x = EPD_HEIGHT / 2;
-        cursor_y = EPD_WIDTH / 2;
-    }
-    EpdFontProperties font_props = epd_font_properties_default();
-    font_props.flags = EPD_DRAW_ALIGN_CENTER;
-    epd_write_string(&FiraSans, text, &cursor_x, &cursor_y, fb, &font_props);
+  int cursor_x = EPD_WIDTH / 2;
+  int cursor_y = EPD_HEIGHT / 2;
+  if (orientation == EPD_ROT_PORTRAIT)
+  {
+    // height and width switched here because portrait mode
+    cursor_x = EPD_HEIGHT / 2;
+    cursor_y = EPD_WIDTH / 2;
+  }
+  EpdFontProperties font_props = epd_font_properties_default();
+  font_props.flags = EPD_DRAW_ALIGN_CENTER;
+  epd_write_string(&FiraSans, text, &cursor_x, &cursor_y, fb, &font_props);
 
-    err = epd_hl_update_screen(&hl, MODE_GC16, temperature);
+  err = epd_hl_update_screen(&hl, MODE_GC16, temperature);
+}
+
+void renderSymbols()
+{
+  for (int i = 0; i < cryptosCount; i++)
+  {
+    cursor_x = 50;
+    cursor_y = (50 * (i + 2));
+    renderCell(cryptos[i].symbol, 0);
+  }
+}
+
+void renderRows()
+{
+  for (int i = 0; i < cryptosCount; i++)
+  {
+    // Render price column
+    cursor_x = 220;
+    cursor_y = (50 * (i + 2));
+    if (cryptos[i].price.usd < 0.00001)
+      renderCell(String(cryptos[i].price.usd, 10), 300);
+    else if (cryptos[i].price.usd < 1)
+      renderCell(String(cryptos[i].price.usd, 5), 300);
+    else
+      renderCell((String)(cryptos[i].price.usd), 300);
+    // Render day change column
+    cursor_x = 530;
+    cursor_y = (50 * (i + 2));
+    renderCell((String)(cryptos[i].dayChange), 150);
+    // Render day change column
+    cursor_x = 800;
+    cursor_y = (50 * (i + 2));
+    renderCell((String)(cryptos[i].weekChange), 150);
+  }
 }
 
 void setup()
 {
   Serial.begin(115200);
-
   correct_adc_reference();
-
   // First setup epd to use later
   epd_init(EPD_OPTIONS_DEFAULT);
   hl = epd_hl_init(WAVEFORM);
@@ -448,74 +480,33 @@ void setup()
   // Set WiFi to station mode and disconnect from an AP if it was previously connected
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
-  delay(1000);
-
-  Serial.println("Setup done");
+  delay(500);
+  Serial.println("Setup done, connecting to WiFi...");
   display_center_message("Connecting to WiFi...");
   connectToWifi();
   display_center_message("Please wait while downloading data...");
   downloadBaseData("usd");
-  delay(1000);
+  delay(500);
   downloadBtcAndEthPrice();
   epd_hl_set_all_white(&hl);
-
-
 }
 
 void loop()
 {
-
-  title();
+  renderHeader();
   err = epd_hl_update_screen(&hl, MODE_GC16, temperature);
-  for (int i = 0; i < cryptosCount; i++)
-  {
-    cursor_x = 50;
-    cursor_y = (50 * (i + 2));
-    renderColumn(cryptos[i].symbol, 0);
-  }
+  // Render Symbol column
+  renderSymbols();
   err = epd_hl_update_screen(&hl, MODE_GC16, temperature);
-  for (int i = 0; i < cryptosCount; i++)
-  {
-    cursor_x = 220;
-    cursor_y = (50 * (i + 2));
-
-    String Str;
-    if (cryptos[i].price.usd < 0.00001)
-    {
-      Str = String(cryptos[i].price.usd, 10);
-    }
-    else if (cryptos[i].price.usd < 1)
-    {
-      Str = String(cryptos[i].price.usd, 5);
-    }
-    else
-    {
-      Str = (String)(cryptos[i].price.usd);
-    }
-    renderColumn(Str, 300);
-  }
-  for (int i = 0; i < cryptosCount; i++)
-  {
-    cursor_x = 530;
-    cursor_y = (50 * (i + 2));
-    renderColumn((String)(cryptos[i].dayChange), 150);
-  }
-  for (int i = 0; i < cryptosCount; i++)
-  {
-    cursor_x = 800;
-    cursor_y = (50 * (i + 2));
-    renderColumn((String)(cryptos[i].weekChange), 150);
-  }
-
-  cursor_y = 520 + 15;
-  cursor_x = 20;
-  footer();
-  //err = epd_hl_update_screen(&hl, MODE_GC16, temperature);
+  // Render rows
+  renderRows();
+  renderFooter();
+  // err = epd_hl_update_screen(&hl, MODE_GC16, temperature);
   epd_poweroff();
   delay(5000);
   downloadBaseData("usd");
-  delay(1000);
+  delay(500);
   downloadBtcAndEthPrice();
   epd_poweron;
-  //epd_hl_set_all_white(&hl);
+  // epd_hl_set_all_white(&hl);
 }
