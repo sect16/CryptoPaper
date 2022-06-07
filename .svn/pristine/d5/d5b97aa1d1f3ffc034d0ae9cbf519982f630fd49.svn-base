@@ -36,6 +36,16 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+//#include <Wire.h>
+//#include <SPI.h>
+//#include <SD.h>
+//#include <hal/rmt_ll.h>
+
+//#define SD_MISO 12
+//#define SD_MOSI 13
+//#define SD_SCLK 14
+//#define SD_CS 15
+
 #define White 0xF0
 #define LightGrey 0xB0
 #define Grey 0x80
@@ -62,7 +72,7 @@ gpio_num_t FIRST_BTN_PIN = GPIO_NUM_39;
 EpdiyHighlevelState hl;
 
 // ambient temperature around device
-int temperature = 28;
+int temperature = 25;
 uint8_t *fb;
 enum EpdDrawError err;
 
@@ -75,8 +85,12 @@ EpdRotation orientation = EPD_ROT_LANDSCAPE;
 // Configurations - Update these
 // ----------------------------
 
-const char *ssid = "YOUR_SSID";
-const char *password = "YOUR_PASSWORD";
+// const char *ssid = "esp";
+// const char *password = "ksmgr100";
+const char *ssid = "DOMOKUN2";
+const char *password = "FATTYLIZARD";
+// const char *ssid = "YOUR_SSID";
+// const char *password = "YOUR_PASSWORD";
 const boolean staticIp = 0;
 
 IPAddress local_IP(192, 168, 31, 115);
@@ -233,128 +247,6 @@ void connectToWifi()
   Serial.println(WiFi.dnsIP());
 }
 
-String formatPercentageChange(double change)
-{
-
-  double absChange = change;
-
-  if (change < 0)
-  {
-    absChange = -change;
-  }
-
-  if (absChange > 100)
-  {
-    return String(absChange, 0) + "%";
-  }
-  else if (absChange >= 10)
-  {
-    return String(absChange, 1) + "%";
-  }
-  else
-  {
-    return String(absChange) + "%";
-  }
-}
-
-void display_center_message(const char *text)
-{
-  // first set full screen to white
-  epd_hl_set_all_white(&hl);
-
-  int cursor_x = EPD_WIDTH / 2;
-  int cursor_y = EPD_HEIGHT / 2;
-  if (orientation == EPD_ROT_PORTRAIT)
-  {
-    // height and width switched here because portrait mode
-    cursor_x = EPD_HEIGHT / 2;
-    cursor_y = EPD_WIDTH / 2;
-  }
-  EpdFontProperties font_props = epd_font_properties_default();
-  font_props.flags = EPD_DRAW_ALIGN_CENTER;
-  epd_write_string(&FiraSans, text, &cursor_x, &cursor_y, fb, &font_props);
-
-  err = epd_hl_update_screen(&hl, MODE_GC16, temperature);
-}
-
-void renderCell(String str, int width)
-{
-  EpdFontProperties font_props = epd_font_properties_default();
-  font_props.flags = EPD_DRAW_ALIGN_LEFT;
-  char text[str.length()];
-  sprintf(text, "%s", str);
-  // Serial.print("Debug: ");
-  // Serial.println(text);
-  // Serial.printf("X: %d Y: %d", cursor_x, cursor_y);
-  // Serial.println();
-  EpdRect area = {
-      .x = cursor_x,
-      .y = cursor_y - 40,
-      .width = width,
-      .height = 50,
-  };
-  epd_fill_rect(area, White, fb);
-  epd_write_string(&FiraSans, text, &cursor_x, &cursor_y, fb, &font_props);
-  epd_poweron();
-  err = epd_hl_update_area(&hl, MODE_GC16, temperature, area);
-}
-
-void renderHeader()
-{
-  EpdFontProperties font_props = epd_font_properties_default();
-  cursor_x = 20;
-  cursor_y = 50;
-  char sym[] = "Symbol";
-  // writeln((GFXfont *)&FiraSans, sym, &cursor_x, &cursor_y, NULL);
-  epd_write_string(&FiraSans, sym, &cursor_x, &cursor_y, fb, &font_props);
-
-  cursor_x = 290;
-  cursor_y = 50;
-  char prc[] = "Price";
-  // writeln((GFXfont *)&FiraSans, prc, &cursor_x, &cursor_y, NULL);
-  epd_write_string(&FiraSans, prc, &cursor_x, &cursor_y, fb, &font_props);
-
-  cursor_x = 570;
-  cursor_y = 50;
-  char da[] = "Day(%)";
-  // writeln((GFXfont *)&FiraSans, da, &cursor_x, &cursor_y, NULL);
-  epd_write_string(&FiraSans, da, &cursor_x, &cursor_y, fb, &font_props);
-
-  cursor_x = 790;
-  cursor_y = 50;
-  char we[] = "Week(%)";
-  // writeln((GFXfont *)&FiraSans, we, &cursor_x, &cursor_y, NULL);
-  epd_write_string(&FiraSans, we, &cursor_x, &cursor_y, fb, &font_props);
-}
-
-void renderRows()
-{
-  for (int i = 0; i < cryptosCount; i++)
-  {
-    // Render Symbols
-    cursor_x = 50;
-    cursor_y = (50 * (i + 2));
-    renderCell(String(cryptos[i].symbol), 120);
-    // Render price column
-    cursor_x = 220;
-    cursor_y = (50 * (i + 2));
-    if (cryptos[i].price.usd < 0.00001)
-      renderCell(String(cryptos[i].price.usd, 10), 300);
-    else if (cryptos[i].price.usd < 1)
-      renderCell(String(cryptos[i].price.usd, 5), 300);
-    else
-      renderCell((String)(cryptos[i].price.usd), 300);
-    // Render day change column
-    cursor_x = 580;
-    cursor_y = (50 * (i + 2));
-    renderCell((String)(cryptos[i].dayChange), 150);
-    // Render day change column
-    cursor_x = 800;
-    cursor_y = (50 * (i + 2));
-    renderCell((String)(cryptos[i].weekChange), 150);
-  }
-}
-
 void renderFooter()
 {
   cursor_y = 520 + 15;
@@ -391,9 +283,191 @@ void renderFooter()
       .height = 18,
   };
   epd_fill_rect(area, White, fb);
+  // err = epd_hl_update_area(&hl, MODE_GC16, temperature, area);
   epd_write_string(&OpenSans8B, ts, &cursor_x, &cursor_y, fb, &font_props);
   epd_poweron();
   err = epd_hl_update_area(&hl, MODE_GC16, temperature, area);
+}
+
+String formatPercentageChange(double change)
+{
+
+  double absChange = change;
+
+  if (change < 0)
+  {
+    absChange = -change;
+  }
+
+  if (absChange > 100)
+  {
+    return String(absChange, 0) + "%";
+  }
+  else if (absChange >= 10)
+  {
+    return String(absChange, 1) + "%";
+  }
+  else
+  {
+    return String(absChange) + "%";
+  }
+}
+
+void renderCryptoCard(Crypto crypto)
+{
+  EpdFontProperties font_props = epd_font_properties_default();
+  cursor_x = 220;
+
+  Serial.print("price usd (double) - ");
+  Serial.println(crypto.price.usd, 10);
+  String Str;
+  if (crypto.price.usd < 0.00001)
+  {
+    Str = String(crypto.price.usd, 10);
+  }
+  else if (crypto.price.usd < 1)
+  {
+    Str = String(crypto.price.usd, 5);
+  }
+  else
+  {
+    Str = (String)(crypto.price.usd);
+  }
+  char *string2 = &Str[0];
+
+  epd_write_string(&FiraSans, string2, &cursor_x, &cursor_y, fb, &font_props);
+
+  Serial.print("Day change - ");
+  Serial.println(formatPercentageChange(crypto.dayChange));
+
+  cursor_x = 530;
+
+  Str = (String)(crypto.dayChange);
+  char *string3 = &Str[0];
+
+  epd_write_string(&FiraSans, string3, &cursor_x, &cursor_y, fb, &font_props);
+
+  Serial.print("Week change - ");
+  Serial.println(formatPercentageChange(crypto.weekChange));
+
+  cursor_x = 800;
+
+  Str = (String)(crypto.weekChange);
+  char *string4 = &Str[0];
+
+  epd_write_string(&FiraSans, string4, &cursor_x, &cursor_y, fb, &font_props);
+}
+
+void renderColumnSym(Crypto crypto)
+{
+  EpdFontProperties font_props = epd_font_properties_default();
+  cursor_x = 50;
+  char *string1 = &crypto.symbol[0];
+  epd_write_string(&FiraSans, string1, &cursor_x, &cursor_y, fb, &font_props);
+}
+
+void renderCell(String str, int w)
+{
+  EpdFontProperties font_props = epd_font_properties_default();
+  font_props.flags = EPD_DRAW_ALIGN_LEFT;
+  char text[str.length()];
+  sprintf(text, "%s", str);
+  // Serial.print("Debug: ");
+  // Serial.println(text);
+  // Serial.printf("X: %d Y: %d", cursor_x, cursor_y);
+  // Serial.println();
+  EpdRect area = {
+      .x = cursor_x,
+      .y = cursor_y - 40,
+      .width = w,
+      .height = 50,
+  };
+  epd_fill_rect(area, White, fb);
+  epd_write_string(&FiraSans, text, &cursor_x, &cursor_y, fb, &font_props);
+  epd_poweron();
+  err = epd_hl_update_area(&hl, MODE_GC16, temperature, area);
+}
+
+void renderHeader()
+{
+  EpdFontProperties font_props = epd_font_properties_default();
+  cursor_x = 20;
+  cursor_y = 50;
+  char sym[] = "Symbol";
+  // writeln((GFXfont *)&FiraSans, sym, &cursor_x, &cursor_y, NULL);
+  epd_write_string(&FiraSans, sym, &cursor_x, &cursor_y, fb, &font_props);
+
+  cursor_x = 290;
+  cursor_y = 50;
+  char prc[] = "Price";
+  // writeln((GFXfont *)&FiraSans, prc, &cursor_x, &cursor_y, NULL);
+  epd_write_string(&FiraSans, prc, &cursor_x, &cursor_y, fb, &font_props);
+
+  cursor_x = 520;
+  cursor_y = 50;
+  char da[] = "Day(%)";
+  // writeln((GFXfont *)&FiraSans, da, &cursor_x, &cursor_y, NULL);
+  epd_write_string(&FiraSans, da, &cursor_x, &cursor_y, fb, &font_props);
+
+  cursor_x = 790;
+  cursor_y = 50;
+  char we[] = "Week(%)";
+  // writeln((GFXfont *)&FiraSans, we, &cursor_x, &cursor_y, NULL);
+  epd_write_string(&FiraSans, we, &cursor_x, &cursor_y, fb, &font_props);
+}
+
+void display_center_message(const char *text)
+{
+  // first set full screen to white
+  epd_hl_set_all_white(&hl);
+
+  int cursor_x = EPD_WIDTH / 2;
+  int cursor_y = EPD_HEIGHT / 2;
+  if (orientation == EPD_ROT_PORTRAIT)
+  {
+    // height and width switched here because portrait mode
+    cursor_x = EPD_HEIGHT / 2;
+    cursor_y = EPD_WIDTH / 2;
+  }
+  EpdFontProperties font_props = epd_font_properties_default();
+  font_props.flags = EPD_DRAW_ALIGN_CENTER;
+  epd_write_string(&FiraSans, text, &cursor_x, &cursor_y, fb, &font_props);
+
+  err = epd_hl_update_screen(&hl, MODE_GC16, temperature);
+}
+
+void renderSymbols()
+{
+  for (int i = 0; i < cryptosCount; i++)
+  {
+    cursor_x = 50;
+    cursor_y = (50 * (i + 2));
+    renderCell(cryptos[i].symbol, 0);
+  }
+}
+
+void renderRows()
+{
+  for (int i = 0; i < cryptosCount; i++)
+  {
+    // Render price column
+    cursor_x = 220;
+    cursor_y = (50 * (i + 2));
+    if (cryptos[i].price.usd < 0.00001)
+      renderCell(String(cryptos[i].price.usd, 10), 300);
+    else if (cryptos[i].price.usd < 1)
+      renderCell(String(cryptos[i].price.usd, 5), 300);
+    else
+      renderCell((String)(cryptos[i].price.usd), 300);
+    // Render day change column
+    cursor_x = 530;
+    cursor_y = (50 * (i + 2));
+    renderCell((String)(cryptos[i].dayChange), 150);
+    // Render day change column
+    cursor_x = 800;
+    cursor_y = (50 * (i + 2));
+    renderCell((String)(cryptos[i].weekChange), 150);
+  }
 }
 
 void setup()
@@ -426,13 +500,15 @@ void loop()
 {
   renderHeader();
   err = epd_hl_update_screen(&hl, MODE_GC16, temperature);
+  // Render Symbol column
+  renderSymbols();
+  err = epd_hl_update_screen(&hl, MODE_GC16, temperature);
   // Render rows
   renderRows();
   renderFooter();
+  // err = epd_hl_update_screen(&hl, MODE_GC16, temperature);
   epd_poweroff();
   delay(5000);
-  //esp_sleep_enable_timer_wakeup(50000);
-  //esp_deep_sleep_start();
   downloadBaseData("usd");
   delay(500);
   downloadBtcAndEthPrice();
